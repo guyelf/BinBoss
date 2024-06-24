@@ -1,6 +1,13 @@
+#  Config
 /config.py
+
+# Secrets
 /Glossary.txt
 /order.txt
 /telegram bot details.txt
 /testEnvSecret.txt
 /test account balance.txt
+# IntelliJ IDEA
+/.idea
+# Cahce
+/__pycache__/
