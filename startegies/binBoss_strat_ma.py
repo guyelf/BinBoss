@@ -1,7 +1,10 @@
+from binance import BinanceSocketManager
+from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
+
 
 
 # Client: AsyncClient
@@ -57,3 +60,27 @@ async def run_ma(client, symbol):
     plt.title(f'{symbol} Moving Average Crossover Strategy')
     plt.legend(loc='best')
     plt.show()
+
+# Gets the current kline stream of the given symbol
+# Keeps an open connection to the Binance API by the encapsulated While True loop inside
+# Executes MA Crossover strategy
+async def run_kline_listener_ma(client, symbol='BTCUSDT', buying_price=0.0, cur_quantity=0.0):
+    quantity = cur_quantity
+    if buying_price == 0 or quantity == 0:
+        quantity = 1
+        print(f"Default values are ON")
+    price_dict = {'current_buying_price': buying_price, 'current_selling_price': buying_price}
+    bm = BinanceSocketManager(client)
+    num_runs = 0
+    async with bm.kline_socket(symbol=symbol) as stream:
+        #while True:
+            # Get current kline stream value
+        res = await stream.recv()
+        closing_price = float(res['k']['c'])
+        cur_symbol = res['k']['s']
+        # Check current values
+        print(
+            f"{datetime.now()} {cur_symbol} {closing_price} | last buying price {price_dict['current_buying_price']} | last selling price {price_dict['current_selling_price']}")
+        # execute trading strategy
+        # MA strategy
+        await run_ma(client=client, symbol=symbol)
