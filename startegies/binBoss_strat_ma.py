@@ -1,5 +1,9 @@
 from binance import BinanceSocketManager
 from datetime import datetime
+
+from helpers.orders import get_price_from_order
+from helpers.telegram_notifications import notify_buying
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -40,7 +44,7 @@ async def data_preparation(client, symbol):
 
 
 # Visualize the strategy
-async def run_ma(client, symbol):
+async def run_kline_listener_ma(client, symbol):
     # Return data_frame relevant for later calculations
     df = await data_preparation(client=client, symbol=symbol)
 
@@ -64,11 +68,17 @@ async def run_ma(client, symbol):
 # Gets the current kline stream of the given symbol
 # Keeps an open connection to the Binance API by the encapsulated While True loop inside
 # Executes MA Crossover strategy
-async def run_kline_listener_ma(client, symbol='BTCUSDT', buying_price=0.0, cur_quantity=0.0):
-    quantity = cur_quantity
-    if buying_price == 0 or quantity == 0:
-        quantity = 1
-        print(f"Default values are ON")
+async def run_ma(client, symbol='BTCUSDT', quantity=0.0):
+    # First order
+    side = client.SIDE_BUY
+    order_type = client.ORDER_TYPE_MARKET
+    order = await client.create_order(symbol=symbol, side=side, type=order_type, quantity=quantity)
+    print("Order: ", order)
+
+    # Get buying price
+    buying_price = get_price_from_order(order)
+    await notify_buying(symbol, buying_price)
+
     price_dict = {'current_buying_price': buying_price, 'current_selling_price': buying_price}
     bm = BinanceSocketManager(client)
     num_runs = 0
@@ -79,8 +89,7 @@ async def run_kline_listener_ma(client, symbol='BTCUSDT', buying_price=0.0, cur_
         closing_price = float(res['k']['c'])
         cur_symbol = res['k']['s']
         # Check current values
-        print(
-            f"{datetime.now()} {cur_symbol} {closing_price} | last buying price {price_dict['current_buying_price']} | last selling price {price_dict['current_selling_price']}")
-        # execute trading strategy
-        # MA strategy
-        await run_ma(client=client, symbol=symbol)
+        print(f"{datetime.now()} {cur_symbol} {closing_price} | last buying price {price_dict['current_buying_price']} | last selling price {price_dict['current_selling_price']}")
+
+        # Run MA
+        await run_kline_listener_ma(client=client, symbol=symbol)
